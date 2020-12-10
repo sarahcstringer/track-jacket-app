@@ -1,0 +1,10 @@
+Workflow:
+- one user texts "create" and that starts a game. Then they get an invite back with a link for other ppl to join (like "text XXXX to +1... to play)
+- the host gets texts each time someone arrives, and can start the game whenever with START
+- anyone can text STATUS and get a status update on the game -- hasn't started, waiting on 3 ppl to complete, etc.
+- When the game starts, everyone gets prompted to write a phrase
+- then once everyone's sent in a phrase, they get sent a phrase and have to send back a picture
+- so on and so forth. Once all the rounds are complete, they get a link to a gallery where they can see the chains.
+
+Qs:
+- can a player be in multiple games at once? Easiest if no -- check if they're in a game, if they are they can quit the game or keep playing it.
