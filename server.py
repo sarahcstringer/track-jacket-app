@@ -29,13 +29,13 @@ def gallery(game_id):
     for p in game.players:
         order = []
         first_round = model.GameRound.query.filter_by(
-            game_id=game_id, player=p.phone, round_number=0
+            game_id=game_id, player=p.id, round_number=0
         ).one()
         order.append(first_round.data)
-        for i, num in enumerate(game.player_order[p.phone][::-1]):
+        for i, id_ in enumerate(game.player_order[str(p.id)][::-1]):
             order.append(
                 model.GameRound.query.filter_by(
-                    game_id=game_id, player=num, round_number=i + 1
+                    game_id=game_id, player=id_, round_number=i + 1
                 )
                 .one()
                 .data
@@ -52,8 +52,16 @@ def receive_sms():
     body = request.form.get("Body")
     media = request.form.get("MediaUrl0")
     resp = MessagingResponse()
-    player = model.GamePlayer.query.get(phone)
     already_playing = model.GamePlayer.playing_other_game(phone)
+    if already_playing:
+        player = (
+            model.GamePlayer.query.join(model.Game)
+            .filter(
+                model.Game.status.in_(["CREATED", "STARTED", "IN_PROGRESS"]),
+                model.GamePlayer.phone == phone,
+            )
+            .first()
+        )
 
     if body == "CREATE":
         if already_playing:
@@ -135,7 +143,7 @@ def receive_sms():
         if media and body:
             resp.message("Please send either an image or text, not both.")
             return str(message)
-        player.game.add_player_response(player.phone, media, body)
+        player.game.add_player_response(player.id, media, body)
         resp.message("Received. Waiting for next round to start.")
         return str(resp)
 

@@ -6,10 +6,10 @@ import os
 import random
 import string
 import sys
-from server import db
-from twilio_conf import twilio_num
 
 import tasks
+from server import db
+from twilio_conf import twilio_num
 
 logger = logging.getLogger(__name__)
 
@@ -24,11 +24,6 @@ class Status(enum.Enum):
     IN_PROGRESS = 3
     ABANDONED = 4
     COMPLETED = 5
-
-
-class PlayerStatus(enum.Enum):
-    ACTIVE = 1
-    QUIT = 2
 
 
 class TurnType(enum.Enum):
@@ -47,8 +42,8 @@ class Game(db.Model):
 
     @staticmethod
     def generate_id():
-        letters_no_vowels = set(string.ascii_letters) - set("aeiouAEIOU")
-        return "".join(random.choice(string.ascii_letters) for i in range(4))
+        letters_no_vowels = list(set(string.ascii_letters) - set("aeiouAEIOU"))
+        return "".join(random.choice(letters_no_vowels) for i in range(4))
 
     @classmethod
     def make(cls, id=None, status=Status.CREATED, created_at=None):
@@ -76,7 +71,6 @@ class Game(db.Model):
                 phone=phone,
                 game_id=self.id,
                 is_host=is_host,
-                status=PlayerStatus.ACTIVE,
             )
 
             db.session.add(player)
@@ -84,8 +78,10 @@ class Game(db.Model):
 
         if not is_host:
             host = GamePlayer.query.filter_by(game_id=self.id, is_host=True).one()
-            print('SENDING')
-            tasks.send_sms.apply_async(args=[f"{phone} joined game.", None, twilio_num, host.phone, None])
+            print("SENDING")
+            tasks.send_sms.apply_async(
+                args=[f"{phone} joined game.", None, twilio_num, host.phone, None]
+            )
         return player
 
     @classmethod
@@ -120,12 +116,12 @@ class Game(db.Model):
                 next(r)
             return [next(r) for i in l]
 
-        players_by_phone = {}
+        players_by_id = {}
         send_order = [rotate(self.players, i) for i in range(len(self.players))]
         random.shuffle(send_order)
         for o in send_order:
-            players_by_phone[o[0].phone] = [p.phone for p in o[1:]]
-        return players_by_phone
+            players_by_id[o[0].id] = [p.id for p in o[1:]]
+        return players_by_id
 
     def start_game(self):
         if self.status != Status.CREATED:
@@ -167,14 +163,16 @@ class Game(db.Model):
         if self.game_is_over:
             self.status = Status.COMPLETED
             db.session.commit()
-            tasks.send_gallery_view.delay(self.id) 
+            tasks.send_gallery_view.delay(self.id)
         else:
             tasks.start_new_round.delay(self.id)
 
-    def add_player_response(self, phone, media, body):
+    def add_player_response(self, id_, media, body):
         # TODO: error handling if we get a phone that's not part of this game session
         type_ = TurnType.DRAW if media else TurnType.WRITE
-        round = GameRound.query.filter_by(game_id=self.id, player=phone, round_number=self.current_round).first()
+        round = GameRound.query.filter_by(
+            game_id=self.id, player=id_, round_number=self.current_round
+        ).first()
         round.data = media if type_ == TurnType.DRAW else body
         round.type = type_
         db.session.commit()
@@ -187,11 +185,11 @@ class GamePlayer(db.Model):
     __tablename__ = "players"
 
     # only supports US numbers right now
-    phone = db.Column(db.String(10), primary_key=True)
+    id = db.Column(db.Integer, autoincrement=True, primary_key=True)
+    phone = db.Column(db.String(10))
     game_id = db.Column(db.String(4), db.ForeignKey("games.id"), nullable=False)
     is_host = db.Column(db.Boolean)
     nickname = db.Column(db.String(64))
-    status = db.Column(db.Enum(PlayerStatus))
     game = db.relationship("Game", backref="players")
 
     @staticmethod
@@ -209,7 +207,6 @@ class GamePlayer(db.Model):
         )
 
     def quit(self):
-        self.status = PlayerStatus.QUIT
         self.game.status = Status.ABANDONED
         db.session.add_all([self, self.game])
         db.session.commit()
@@ -220,7 +217,7 @@ class GameRound(db.Model):
     __tablename__ = "rounds"
     id = db.Column(db.Integer, autoincrement=True, primary_key=True)
     game_id = db.Column(db.String(4), db.ForeignKey("games.id"), nullable=False)
-    player = db.Column(db.String(10), db.ForeignKey("players.phone"))
+    player = db.Column(db.Integer, db.ForeignKey("players.id"))
     round_number = db.Column(db.Integer)
     data = db.Column(db.Text)
     turn_type = db.Column(db.Enum(TurnType))
@@ -233,5 +230,5 @@ class GameRound(db.Model):
 
 if __name__ == "__main__":
     from server import connect_to_db
-    connect_to_db()
 
+    connect_to_db()
