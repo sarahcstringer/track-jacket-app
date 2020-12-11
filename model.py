@@ -6,16 +6,16 @@ import os
 import random
 import string
 import sys
+from server import db
+from twilio_conf import twilio_num
+
+import tasks
 
 logger = logging.getLogger(__name__)
 
 from dotenv import load_dotenv
 
 load_dotenv()
-
-from flask_sqlalchemy import SQLAlchemy
-
-db = SQLAlchemy()
 
 
 class Status(enum.Enum):
@@ -43,9 +43,11 @@ class Game(db.Model):
     status = db.Column(db.Enum(Status))
     created_at = db.Column(db.DateTime)
     player_order = db.Column(db.JSON)
+    current_round = db.Column(db.Integer)
 
     @staticmethod
     def generate_id():
+        letters_no_vowels = set(string.ascii_letters) - set("aeiouAEIOU")
         return "".join(random.choice(string.ascii_letters) for i in range(4))
 
     @classmethod
@@ -54,16 +56,21 @@ class Game(db.Model):
         while cls.query.get(id):
             logger.info("generating new game id")
             id = cls.generate_id()
-        game = cls(id=id, status=status, created_at=created_at or dt.datetime.utcnow())
+        game = cls(
+            id=id,
+            status=status,
+            created_at=created_at or dt.datetime.utcnow(),
+            current_round=0,
+        )
         return game
 
     def add_player(self, phone):
         is_host = len(self.players) == 0
-        player = GamePlayer.query.get(phone)
-        if player and player.game != self:
+        already_playing = GamePlayer.playing_other_game(phone)
+        if already_playing:
             logger.info("player is already playing another game, not adding")
             return
-        if not player:
+        else:
             logger.info("creating a new player and adding them to the game")
             player = GamePlayer(
                 phone=phone,
@@ -71,15 +78,23 @@ class Game(db.Model):
                 is_host=is_host,
                 status=PlayerStatus.ACTIVE,
             )
+
             db.session.add(player)
+            db.session.commit()
+
+        if not is_host:
+            host = GamePlayer.query.filter_by(game_id=self.id, is_host=True).one()
+            print('SENDING')
+            tasks.send_sms.apply_async(args=[f"{phone} joined game.", None, twilio_num, host.phone, None])
         return player
 
     @classmethod
-    def create_game(cls):
+    def create_game(cls, phone):
         game_id = cls.generate_id()
         game = cls.make()
-        player = cls.add_player()
         db.session.add(game)
+        db.session.flush()
+        player = game.add_player(phone)
         logger.info("committing game and player.")
         db.session.commit()
         return game
@@ -113,47 +128,59 @@ class Game(db.Model):
         return players_by_phone
 
     def start_game(self):
-        if self.status != "CREATED":
+        if self.status != Status.CREATED:
             logger.info("game already started, continuing")
             return
         self.player_order = self._generate_turn_order()
         self.status = Status.STARTED
         db.session.add(self)
         db.session.commit()
-        # TODO: SEND EVENT
+        tasks.start_game.apply_async(args=[self.id])
 
-    def is_round_over(self):
+    @property
+    def current_round_is_over(self):
         num_players = len(self.players)
         return (
             num_players
-            == GameRound.query.filter_by(
-                game_id=self.id, round_number=self.current_round
+            == GameRound.query.filter(
+                GameRound.game_id == self.id,
+                GameRound.round_number == self.current_round,
+                GameRound.data.isnot(None),
             ).count()
         )
 
+    @property
+    def game_is_over(self):
+        num_players = len(self.players)
+        final_round = GameRound.query.filter(
+            GameRound.game_id == self.id,
+            GameRound.round_number == num_players - 1,
+            GameRound.data.isnot(None),
+        )
+        return num_players == final_round.count()
+
     def end_round(self):
-        # TODO: SEND EVENT
-        self.round += 1
+        self.current_round += 1
         db.session.add(self)
         db.session.commit()
 
-    @property
-    def missing_players_round(self):
-        all_players = set(self.players)
-        this_round_responses = [r for r in game.rounds where r.round_number == self.current_round]
-        players_this_round = set(r.player for r in this_round_responses)
-        return len(all_players - players_this_round)
+        if self.game_is_over:
+            self.status = Status.COMPLETED
+            db.session.commit()
+            tasks.send_gallery_view.delay(self.id) 
+        else:
+            tasks.start_new_round.delay(self.id)
 
     def add_player_response(self, phone, media, body):
+        # TODO: error handling if we get a phone that's not part of this game session
         type_ = TurnType.DRAW if media else TurnType.WRITE
-        round = GameRound(
-            game_id=self.id,
-            player=phone,
-            round_number=self.current_round,
-            data=media if type_ == TurnType.DRAW else body,
-        )
-        db.session.add(round)
+        round = GameRound.query.filter_by(game_id=self.id, player=phone, round_number=self.current_round).first()
+        round.data = media if type_ == TurnType.DRAW else body
+        round.type = type_
         db.session.commit()
+
+        if self.current_round_is_over:
+            self.end_round()
 
 
 class GamePlayer(db.Model):
@@ -166,7 +193,6 @@ class GamePlayer(db.Model):
     nickname = db.Column(db.String(64))
     status = db.Column(db.Enum(PlayerStatus))
     game = db.relationship("Game", backref="players")
-    current_round = db.Column(db.Integer)
 
     @staticmethod
     def playing_other_game(phone):
@@ -176,7 +202,7 @@ class GamePlayer(db.Model):
             GamePlayer.query.join(Game)
             .filter(
                 GamePlayer.phone == phone,
-                ~Game.status.in_([Status.CREATED, Status.STARTED, Status.IN_PROGRESS]),
+                Game.status.in_(["CREATED", "STARTED", "IN_PROGRESS"]),
             )
             .count()
             > 0
@@ -187,19 +213,7 @@ class GamePlayer(db.Model):
         self.game.status = Status.ABANDONED
         db.session.add_all([self, self.game])
         db.session.commit()
-        # TODO: Send an event to cancel the game for everyone
-
-
-class GameStart(db.Model):
-    __tablename__ = "starts"
-    id = db.Column(db.Integer, autoincrement=True, primary_key=True)
-    game_id = db.Column(db.String(4), db.ForeignKey("games.id"), nullable=False)
-    player = db.Column(db.String(10), db.ForeignKey("players.phone"))
-    data = db.Column(db.Text, nullable=False)
-    prompt_sent = db.Column(db.Boolean)
-    prompt_sid = db.Column(db.String(40))
-
-    game = db.relationship("Game", backref="start")
+        tasks.abandon_game.apply_async(args=[self.game.id, self.phone])
 
 
 class GameRound(db.Model):
@@ -213,30 +227,11 @@ class GameRound(db.Model):
     # sent = db.Column(db.Boolean, default=False) --> for events, did we send this info?
     prompt_sent = db.Column(db.Boolean)
     prompt_sid = db.Column(db.String(40))
-    
 
     game = db.relationship("Game", backref="rounds")
-    player = db.relationship("GamePlayer", backref="rounds")
-
-
-def connect_to_db(app, db, db_path):
-    """Connect the database to Flask app."""
-
-    # Configure to use our PstgreSQL database
-    app.config["SQLALCHEMY_DATABASE_URI"] = db_path
-    db.app = app
-    db.init_app(app)
-
-
-def startup():
-    from server import app
-
-    db_path = os.environ.get("DATABASE_PATH")
-    connect_to_db(app, db, db_path)
 
 
 if __name__ == "__main__":
-    startup()
-    if sys.argv[-1] == "--create":
-        db.create_all()
-    print("Connected to DB.")
+    from server import connect_to_db
+    connect_to_db()
+
