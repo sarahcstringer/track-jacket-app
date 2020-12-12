@@ -37,7 +37,7 @@ class Game(db.Model):
     id = db.Column(db.String(4), primary_key=True)
     status = db.Column(db.Enum(Status))
     created_at = db.Column(db.DateTime)
-    player_order = db.Column(db.JSON)
+    play_order = db.Column(db.JSON)
     current_round = db.Column(db.Integer)
 
     @staticmethod
@@ -101,7 +101,7 @@ class Game(db.Model):
 
         This is the order that a user's word will traverse through players.
         For example, if the order is:
-        A: [B, C, D]
+        [A, B, C, D]
         Then player A's initial word will be sent to B; B will draw the word and it will be
         sent to C; C will write a word based on B's drawing; D will receive C's word and draw it.
         """
@@ -116,34 +116,32 @@ class Game(db.Model):
                 next(r)
             return [next(r) for i in l]
 
-        players_by_id = {}
         send_order = [rotate(self.players, i) for i in range(len(self.players))]
         random.shuffle(send_order)
-        for o in send_order:
-            players_by_id[o[0].id] = [p.id for p in o[1:]]
-        return players_by_id
+        return [[p.id for p in turn] for turn in send_order]
 
     def start_game(self):
         if self.status != Status.CREATED:
             logger.info("game already started, continuing")
             return
-        self.player_order = self._generate_turn_order()
+        self.play_order = self._generate_turn_order()
         self.status = Status.STARTED
         db.session.add(self)
         db.session.commit()
         tasks.start_game.apply_async(args=[self.id])
 
     @property
+    def current_round_responses(self):
+        return GameRound.query.filter(
+            GameRound.game_id == self.id,
+            GameRound.round_number == self.current_round,
+            GameRound.data.isnot(None),
+        ).count()
+
+    @property
     def current_round_is_over(self):
         num_players = len(self.players)
-        return (
-            num_players
-            == GameRound.query.filter(
-                GameRound.game_id == self.id,
-                GameRound.round_number == self.current_round,
-                GameRound.data.isnot(None),
-            ).count()
-        )
+        return num_players == self.current_round_responses
 
     @property
     def game_is_over(self):
@@ -221,7 +219,6 @@ class GameRound(db.Model):
     round_number = db.Column(db.Integer)
     data = db.Column(db.Text)
     turn_type = db.Column(db.Enum(TurnType))
-    # sent = db.Column(db.Boolean, default=False) --> for events, did we send this info?
     prompt_sent = db.Column(db.Boolean)
     prompt_sid = db.Column(db.String(40))
 

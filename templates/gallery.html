@@ -1,24 +1,34 @@
-<!doctype html>
-<html>
-    <head>
-        <title>Twilio Telephone Pictionary</title>
-        <link rel="stylesheet" href="https://stackpath.bootstrapcdn.com/bootstrap/4.4.1/css/bootstrap.min.css">
-    </head>
-    <body>
-        {% for set in data %}
-        <div> ITEM 
-            {% for item in set %}
-                {% if loop.index % 2 != 0 %}
-                    <h1>{{ item }}</h1>
-                {% else %}
-                    <img src={{ item }} width=400px>
-                {% endif %}
-             {% endfor %}
-        </div>
-         {% endfor %}
+{% extends 'base.html' %}
+{% block body %}
 
-        <script src="https://code.jquery.com/jquery-3.3.1.slim.min.js" integrity="sha384-q8i/X+965DzO0rT7abK41JStQIAqVgRVzpbzo5smXKp4YfRvH+8abtTE1Pi6jizo" crossorigin="anonymous"></script>
-<script src="https://cdnjs.cloudflare.com/ajax/libs/popper.js/1.14.7/umd/popper.min.js" integrity="sha384-UO2eT0CpHqdSJQ6hJty5KVphtPhzWj9WO1clHTMGa3JDZwrnQq4sF86dIHNDz0W1" crossorigin="anonymous"></script>
-<script src="https://stackpath.bootstrapcdn.com/bootstrap/4.3.1/js/bootstrap.min.js" integrity="sha384-JjSmVgyd0p3pXB1rRibZUAYoIIy6OrQ6VrjIEaFf/nJGzIxFDsf4x0xIM+B07jRM" crossorigin="anonymous"></script>
-    </body>
-</html>
+
+<h1>Game Gallery</h1>
+<h2>Click on a starting word/phrase to view the final result.</h2>
+<!-- Buttons to display -->
+{% for set in data %}
+    <button id=button-{{set[0]}} class="btn btn-primary" data-item={{set[0]}}>{{set[1]}}</button>
+{% endfor %}
+
+<!-- Gallery divs -->
+{% for set in data %}
+<div id=div-{{set[0]}} style="display: none" class="gallery">
+    <h3>Starting point: {{ set[1] }}</h3>
+    {% for item in set[1:] %}
+        {% if loop.index % 2 != 0 %}
+            <h4>{{ item }}</h4>
+        {% else %}
+            <img src={{ item }} width=400px>
+        {% endif %}
+     {% endfor %}
+</div>
+ {% endfor %}
+
+ <script>
+     // hide and show divs based on button clicks
+     $(".btn").on("click", function() {
+         $(".gallery").hide();
+         itemNumber = $(this).data("item");
+         $("#div-"+itemNumber).show();
+     });
+ </script>
+ {% endblock %}
