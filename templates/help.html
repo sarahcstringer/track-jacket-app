@@ -1,32 +1,48 @@
 {% extends 'base.html' %}    
 {% block body %}
 <div class="container">
-<h1>Welcome to Twilio-fueled Telephone Pictionary!</h1>
+    <div class="row">
+        <div class="col-sm">
+            <h1>Welcome to Twilio-fueled Telephone Pictionary!</h1>
 
-<p>In Telephone Pictionary, each person starts by writing down a word or phrase. That word or phrase gets passed to another person who reads it, and then draws a picture representing that topic. That drawing then gets passed to a new person, who looks at the picture and writes a sentence describing it. The game continues that way, with players alternating between drawing or writing, until each player has interacted with every starting topic.</p>
-
-<h2>General Gameplay</h2>
-<ol>
-    <li>The host will create a game and send the game id to other players.</li>
-    <li>Players can join by texting JOIN and the game id.</li>
-    <li>The host can see who joins a game and decide when to start it. Once the host starts a game, everyone will be prompted to send in an initial word or phrase.</li>
-    <li>After everyone has sent their initial word/phrase, each participant will be sent one of those phrases, draw it, and send back the drawing.
-        <ul><b>How to draw and send images:</b>
-            <li>Draw in a Notes or Google Keep mobile application, screenshot the image, and send it.</li>
-            <li>Draw in the web browser using something like <a href="https://sketch.io/sketchpad/">Sketch.io</a>, screenshot it, and send the image.</li>
-            <li>Draw the image with a pen and paper, take a picture, and send the picture.</li>
-        </ul>
-    <li>Next, each player will receive one of those images, and should write a sentence to describe the image.</li>
-    <li>The game continues until each player has written or drawn every starting phrase. Then, the game ends and players can see a gallery of the game.</li>
-</ol>
-<h2>Important commands:</h2>
-<ul>
-    <li>Text CREATE to create a new game (<b>You can only be in one game at a time.</b>).</li>
-    <li>Text START to begin the game once everyone has joined. If you are the host, you will receive a notification each time a player joins the game. Only the host can start a game.</li>
-    <li>Text LEAVE to leave a game. <b>This will end the game for everyone.</b></li>
-    <li>Text JOIN and the game id to join an existing game. A game cannot be joined after it is started by the host. <b>You can only be in one game at a time.</b> <i>Example: JOIN abcd</i></li>
-    <li>Text STATUS and the game id to see the status of an existing game. <i>Example: STATUS abcd</i></li>
-    <li>Text REPEAT PROMPT if you are in a game to receive your prompt again.</li>
-</ul>
+            <p>In Telephone Pictionary, each person starts by writing down a word or phrase. That word or phrase gets passed to another person who reads it, and then draws a picture representing that topic. That drawing then gets passed to a new person, who looks at the picture and writes a sentence describing it. The game continues that way, with players alternating between drawing or writing, until each player has interacted with every starting topic.</p>
+        </div>
+    </div>
+    <div class="row">
+        <div class="col-sm">
+            <h2>General Gameplay</h2>
+            <p>This game is played through SMS/MMS.</p>
+            <ol>
+                <li>The host will create a game and send the game id to other players.</li>
+                <li>Players can join by texting JOIN and the game id.</li>
+                <li>The host can see who joins a game and decide when to start it. When the game starts, players will be prompted to send in an initial word or phrase.</li>
+                <li>After everyone has sent their initial word/phrase, each participant will be sent one of those phrases, draw it, and send back the drawing.
+                    <ul><u>How to draw and send images:</u>
+                        <li>Draw in a Notes or Google Keep mobile application, screenshot the image, and send it.</li>
+                        <li>Draw in the web browser using something like <a href="https://sketch.io/sketchpad/">Sketch.io</a>, screenshot it, and send the image.</li>
+                        <li>Draw the image with a pen and paper, take a picture, and send the picture.</li>
+                    </ul>
+                <li>Next, each player will receive one of those images, and should write a sentence to describe the image.</li>
+                <li>The game continues until each player has written or drawn every starting phrase.</li>
+            </ol>
+        </div>
+        <div class="col-sm text-center">
+            <h3>Sample</h3>
+            <img src="/static/images/screenshot.png" width=600>
+        </div>
+    </div>
+    <div class="row">
+        <div class="col-sm">
+            <h2>Important commands:</h2>
+            <ul>
+                <li>Text CREATE to create a new game (<b>You can only be in one game at a time.</b>).</li>
+                <li>Text START to begin the game once everyone has joined. If you are the host, you will receive a notification each time a player joins the game. Only the host can start a game.</li>
+                <li>Text LEAVE to leave a game. <b>This will end the game for everyone.</b></li>
+                <li>Text JOIN and the game id to join an existing game. A game cannot be joined after it is started by the host. <b>You can only be in one game at a time.</b> <i>Example: JOIN abcd</i></li>
+                <li>Text STATUS while in a game to see the status.</li>
+                <li>Text REPEAT PROMPT if you are in a game to receive your prompt again.</li>
+            </ul>
+        </div>
+    </div>
 </div>
 {% endblock %}

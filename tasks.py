@@ -13,6 +13,7 @@ BROKER_URL = "redis://localhost:6379/0"
 BACKEND_URL = "redis://localhost:6379/1"
 celery_app = Celery("tasks", broker=BROKER_URL, backend=BACKEND_URL)
 
+
 @celery_app.task
 def update_round_information(round_id, message_sid):
     round = model.GameRound.query.get(round_id)
@@ -83,7 +84,9 @@ def start_new_round(game_id):
         round = model.GameRound(
             game_id=game.id,
             player=send_to_player,
-            turn_type=model.TurnType.DRAW if game.current_round % 2 else model.TurnType.WRITE,
+            turn_type=model.TurnType.DRAW
+            if game.current_round % 2
+            else model.TurnType.WRITE,
             round_number=game.current_round,
         )
         db.session.add(round)

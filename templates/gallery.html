@@ -1,34 +1,45 @@
 {% extends 'base.html' %}
+
 {% block body %}
 
+<div class="container">
+    <div class="col-xs-12 text-center">
+        <h1>Game Gallery</h1>
+        <h2>Click on a starting word/phrase to view the final result.</h2>
+        <!-- Buttons to display -->
+        {% for set in data %}
+            <button id=button-{{set[0]}} class="btn btn-primary" data-item={{set[0]}}>{{set[1]}}</button>
+        {% endfor %}
+    </div>
 
-<h1>Game Gallery</h1>
-<h2>Click on a starting word/phrase to view the final result.</h2>
-<!-- Buttons to display -->
-{% for set in data %}
-    <button id=button-{{set[0]}} class="btn btn-primary" data-item={{set[0]}}>{{set[1]}}</button>
-{% endfor %}
-
-<!-- Gallery divs -->
-{% for set in data %}
-<div id=div-{{set[0]}} style="display: none" class="gallery">
-    <h3>Starting point: {{ set[1] }}</h3>
-    {% for item in set[1:] %}
-        {% if loop.index % 2 != 0 %}
-            <h4>{{ item }}</h4>
-        {% else %}
-            <img src={{ item }} width=400px>
-        {% endif %}
-     {% endfor %}
+    <!-- Gallery divs -->
+    {% for set in data %}
+    <div class="col-xs-12 text-center">
+        <div id="div-{{set[0]}}" style="display: none" class="gallery">
+            <h3>Starting point: {{ set[1] }}</h3>
+            {% for item in set[1:] %}
+            {% if loop.index % 2 != 0 %}
+                <h4>{{ item }}</h4>
+            {% else %}
+                <img src={{ item }} width=400px class="drawing" style="border: 5px solid">
+            {% endif %}
+            {% if loop.index != set|length - 1 %}
+            <div>
+                <img src="/static/images/down-arrow.png" width=50px>
+            </div>
+            {% endif %}
+            {% endfor %}
+        </div>
+    </div>
+    {% endfor %}
 </div>
- {% endfor %}
 
- <script>
-     // hide and show divs based on button clicks
-     $(".btn").on("click", function() {
-         $(".gallery").hide();
-         itemNumber = $(this).data("item");
-         $("#div-"+itemNumber).show();
-     });
- </script>
- {% endblock %}
+<script>
+    // hide and show divs based on button clicks
+    $(".btn").on("click", function() {
+        $(".gallery").hide();
+        itemNumber = $(this).data("item");
+        $("#div-"+itemNumber).show();
+    });
+</script>
+{% endblock %}
