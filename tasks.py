@@ -19,15 +19,21 @@ def update_round_information(round_id, message_sid):
     round = model.GameRound.query.get(round_id)
     round.prompt_sent = True
     round.prompt_sid = message_sid
-    db.session.add(round)
-    db.session.commit()
+    try:
+        db.session.add(round)
+        db.session.commit()
+    except:
+        db.session.rollback()
+    finally:
+        db.session.close()
 
 
 @celery_app.task
 def send_sms(body, media, from_, to, round_id=None):
     message = client.messages.create(body=body, from_=from_, to=to, media_url=media)
-    if round_id:
-        update_round_information.apply_async(args=[round_id, message.sid])
+    # TODO: Session management -- this isn't working right now.
+    # if round_id and message.sid:
+    # update_round_information.apply_async(args=[round_id, message.sid])
 
 
 @celery_app.task

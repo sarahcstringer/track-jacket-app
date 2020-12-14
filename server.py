@@ -1,4 +1,5 @@
 import datetime as dt
+import logging
 import os
 
 from dotenv import load_dotenv
@@ -6,7 +7,6 @@ from flask import Flask, render_template, request, session
 from flask_sqlalchemy import SQLAlchemy
 from twilio.twiml.messaging_response import MessagingResponse
 
-import logging
 logger = logging.getLogger(__name__)
 import tasks
 import twilio_conf
@@ -73,7 +73,9 @@ def handle_empty_state(body, phone):
         if not game:
             return format_response("That game does not exist.")
         if game.status != model.Status.CREATED:
-            return format_response("That game has already started and cannot be joined.")
+            return format_response(
+                "That game has already started and cannot be joined."
+            )
         player = game.add_player(phone)
         if not player:
             return format_response("Error adding player, please try again.")
@@ -91,7 +93,7 @@ def handle_empty_state(body, phone):
     elif body.lower() == "repeat prompt":
         return format_response("You are not playing a game.")
     return format_response(
-        "Telephone Pictionary -- visit {os.environ.get('NGROK_PATH')}help to view rules."
+        f"Telephone Pictionary -- visit {os.environ.get('NGROK_PATH')}help to view rules."
     )
 
 
@@ -112,6 +114,7 @@ def handle_joined_game_not_started(body, phone, player):
     elif body.lower() == "leave":
         player.quit()
 
+
 def handle_playing_submitted_response(body, phone, player):
     if (
         body.lower() == "create"
@@ -122,6 +125,7 @@ def handle_playing_submitted_response(body, phone, player):
             "You are in another game and must quit (text LEAVE) or complete before starting another."
         )
     elif "status" == body.lower():
+        game = player.game
         num_players = len(game.players)
         num_waiting = num_players - game.current_round_responses
         return format_response(
