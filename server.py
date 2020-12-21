@@ -192,7 +192,7 @@ def receive_sms():
         .first()
     )
     if player and player.game.status == model.Status.CREATED:
-        return handle_joined_game_not_started(body, phone, player)
+        return handle_joined_game_not_started(body, phone, player) or MessagingResponse()
     elif player and player.game.status in [
         model.Status.STARTED,
         model.Status.IN_PROGRESS,
@@ -202,9 +202,9 @@ def receive_sms():
             game_id=game.id, round_number=game.current_round, player=player.id
         ).first()
         if player_current_round and not player_current_round.data:
-            return handle_playing_waiting_for_response(body, phone, media, player)
+            return handle_playing_waiting_for_response(body, phone, media, player) or MessagingResponse()
         else:
-            return handle_playing_submitted_response(body, phone, player)
+            return handle_playing_submitted_response(body, phone, player) or MessagingResponse()
 
     return MessagingResponse()
 
