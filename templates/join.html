@@ -1,0 +1,14 @@
+{% extends 'base.html' %}
+
+{% block body %}
+
+<div class="container">
+    <div class="col-xs-12 text-center">
+        <h1>Telephone Pictionary</h1>
+        <h3>You've been invited to join a game!</h3>
+        <button type="button" class="btn btn-primary"><a href="sms:{{to}}&body={{message}}" style="color:white"><h3>Click here to send a text to join the game</h3></a></button>
+        <h3>If that link doesn't work, text <u>Join {{ game_id }}</u> to {{ to }}</h3>
+        <a href="/help">View help and instructions</a>
+    </div>
+</div>
+{% endblock %}

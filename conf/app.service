@@ -1,0 +1,15 @@
+[Unit]
+Description=Twilio Flask App
+After=network.target
+
+[Service]
+User=ubuntu
+Group=ubuntu
+Environment="LANG=en_US.UTF-8"
+Environment="LANGUAGE=en_US.UTF-8:"
+WorkingDirectory=/home/ubuntu/track-jacket-app/
+ExecStart=/bin/bash -c "python3 server.py &>> flask.log"
+Restart=always
+
+[Install]
+WantedBy=multi-user.target

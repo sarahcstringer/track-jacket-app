@@ -51,6 +51,14 @@ def gallery(game_id):
     data = generate_gallery(game)
     return render_template("gallery.html", data=data)
 
+@app.route("/join/XYZA")
+def join_game():
+    #game = model.Game.query.get(game_id)
+    #if not game:
+    #    return "That is not a valid url to join a game."
+    message = f"Join%20XYZA"
+    return render_template("join.html", to=twilio_conf.twilio_num, message=message, game_id="XYZA")
+
 
 def format_response(msg):
     resp = MessagingResponse()
