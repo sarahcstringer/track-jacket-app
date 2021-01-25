@@ -1,0 +1,12 @@
+{% extends 'base.html' %}
+
+{% block body %}
+
+<div class="container">
+    <div class="col-xs-12 text-center">
+        <h1>Welcome to Telephone Pictionary!</h1>
+        <h3>To start a game, text CREATE to {{ twilio_num }}</h3>
+        <h3><a href="/help">View help and instructions</a></h3>
+    </div>
+</div>
+{% endblock %}

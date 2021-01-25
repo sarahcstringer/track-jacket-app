@@ -111,5 +111,5 @@ def send_round_update(phone_nums, num_remaining):
 def send_gallery_view(game_id):
     game = model.Game.query.get(game_id)
     for p in game.players:
-        body = f"Game is over! Visit {os.environ.get('NGROK_PATH')}gallery/{game_id} to view the final results."
+        body = f"Game is over! Visit {os.environ.get('EIP')}/gallery/{game_id} to view the final results."
         send_sms.apply_async(args=[body, None, twilio_num, p.phone, None])

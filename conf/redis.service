@@ -1,0 +1,15 @@
+[Unit]
+Description=Redis
+After=network.target
+
+[Service]
+User=ubuntu
+Group=ubuntu
+Environment="LANG=en_US.UTF-8"
+Environment="LANGUAGE=en_US.UTF-8:"
+WorkingDirectory=/home/ubuntu/
+ExecStart=/bin/bash -c "redis-server"
+Restart=always
+
+[Install]
+WantedBy=multi-user.target

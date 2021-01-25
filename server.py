@@ -38,6 +38,10 @@ def generate_gallery(game):
     return data
 
 
+@app.route("/")
+def home():
+    return render_template("home.html", twilio_num=twilio_conf.twilio_num)
+
 @app.route("/help")
 def show_help():
     return render_template("help.html")
@@ -51,13 +55,13 @@ def gallery(game_id):
     data = generate_gallery(game)
     return render_template("gallery.html", data=data)
 
-@app.route("/join/XYZA")
-def join_game():
-    #game = model.Game.query.get(game_id)
-    #if not game:
-    #    return "That is not a valid url to join a game."
-    message = f"Join%20XYZA"
-    return render_template("join.html", to=twilio_conf.twilio_num, message=message, game_id="XYZA")
+@app.route("/join/<game_id>")
+def join_game(game_id):
+    game = model.Game.query.get(game_id)
+    if not game:
+        return "That is not a valid url to join a game."
+    message = f"Join%20{game_id}"
+    return render_template("join.html", to=twilio_conf.twilio_num, message=message, game_id=game_id)
 
 
 def format_response(msg):
@@ -70,8 +74,8 @@ def handle_empty_state(body, phone):
     if body.lower() == "create":
         game = model.Game.create_game(phone)
         return format_response(
-            f"Game created. Tell your friends to text \nJOIN {game.id}\n to "
-            f"{twilio_conf.twilio_num}. Text START when everyone has joined to begin the game."
+            f"Game created. Send this join link to your friends: {os.environ.get('EIP')}/join/{game.id}\n"
+            f"Text START when everyone has joined to begin the game."
         )
     elif body.lower().startswith("join"):
         game_id = body.split(" ")[-1]
@@ -88,7 +92,7 @@ def handle_empty_state(body, phone):
         if not player:
             return format_response("Error adding player, please try again.")
         return format_response(
-            f"Joined game. You will receive a message when the game has started. Visit {os.environ.get('NGROK_PATH')}help to view rules."
+            f"Joined game. You will receive a message when the game has started. Visit {os.environ.get('EIP')}/help to view rules."
         )
     elif body.lower().startswith("status"):
         return format_response("You are not playing a game, status not available.")
@@ -101,7 +105,7 @@ def handle_empty_state(body, phone):
     elif body.lower() == "repeat prompt":
         return format_response("You are not playing a game.")
     return format_response(
-        f"Telephone Pictionary -- visit {os.environ.get('NGROK_PATH')}help to view rules."
+        f"Telephone Pictionary -- visit {os.environ.get('EIP')}/help to view rules."
     )
 
 
