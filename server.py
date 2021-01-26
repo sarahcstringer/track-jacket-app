@@ -60,6 +60,8 @@ def join_game(game_id):
     game = model.Game.query.get(game_id)
     if not game:
         return "That is not a valid url to join a game."
+    if game.status != model.Status.CREATED:
+        return "That game has already started and cannot be joined."
     message = f"Join%20{game_id}"
     return render_template("join.html", to=twilio_conf.twilio_num, message=message, game_id=game_id)
 
