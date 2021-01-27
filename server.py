@@ -112,7 +112,9 @@ def handle_empty_state(body, phone):
 
 
 def handle_joined_game_not_started(body, phone, player):
-    if body.lower() == "start":
+    if body.lower().startswith("join"):
+        return format_response("You have already joined a game.")
+    elif body.lower() == "start":
         if player.is_host:
             if len(player.game.players) <= 1:
                 return format_response("There are no other players. Cannot start game.")
