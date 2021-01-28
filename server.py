@@ -19,6 +19,8 @@ load_dotenv()
 
 
 app = Flask(__name__)
+app.config["SQLALCHEMY_TRACK_MODIFICATIONS"] = False
+app.config["SQLALCHEMY_DATABASE_URI"] = os.environ.get("DATABASE_PATH")
 db = SQLAlchemy(app)
 
 
@@ -164,7 +166,7 @@ def handle_playing_waiting_for_response(body, phone, media, player):
         )
     elif body.lower() == "leave":
         player.quit()
-    elif body.lower() == "repeat prompt":
+    elif body.lower() == "repeat prompt" or body.lower() == "resend prompt":
         game = player.game
         for turn in player.game.play_order:
             if turn[game.current_round] != player.id:
