@@ -153,6 +153,22 @@ class Game(db.Model):
         )
         return num_players == final_round.count()
 
+    @property
+    def waiting_on_players(self):
+        waiting_player_ids = (
+            db.session.query(GameRound.player)
+            .filter(
+                GameRound.game_id == self.id,
+                GameRound.round_number == self.current_round,
+                GameRound.data == None,
+            )
+            .subquery()
+        )
+        waiting_player_numbers = db.session.query(GamePlayer.phone).filter(
+            GamePlayer.id.in_(waiting_player_ids)
+        )
+        return [p for p, in waiting_player_numbers]
+
     def end_round(self):
         self.current_round += 1
         db.session.add(self)

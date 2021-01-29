@@ -44,6 +44,7 @@ def generate_gallery(game):
 def home():
     return render_template("home.html", twilio_num=twilio_conf.twilio_num)
 
+
 @app.route("/help")
 def show_help():
     return render_template("help.html")
@@ -57,6 +58,7 @@ def gallery(game_id):
     data = generate_gallery(game)
     return render_template("gallery.html", data=data)
 
+
 @app.route("/join/<game_id>")
 def join_game(game_id):
     game = model.Game.query.get(game_id)
@@ -65,7 +67,9 @@ def join_game(game_id):
     if game.status != model.Status.CREATED:
         return "That game has already started and cannot be joined."
     message = f"Join%20{game_id}"
-    return render_template("join.html", to=twilio_conf.twilio_num, message=message, game_id=game_id)
+    return render_template(
+        "join.html", to=twilio_conf.twilio_num, message=message, game_id=game_id
+    )
 
 
 def format_response(msg):
@@ -146,9 +150,11 @@ def handle_playing_submitted_response(body, phone, player):
         game = player.game
         num_players = len(game.players)
         num_waiting = num_players - game.current_round_responses
-        return format_response(
-            f"On round {game.current_round} of {num_players}, waiting on {num_waiting} players to send responses."
-        )
+        waiting_players = "\n".join(game.waiting_on_players)
+        message = f"On round {game.current_round + 1} of {num_players}, waiting on {num_waiting} players to send responses"
+        if waiting_players:
+            message += ":\n" + waiting_players
+        return format_response(message)
     elif body.lower() == "leave":
         player.quit()
     elif body.lower() == "repeat prompt":
@@ -159,11 +165,14 @@ def handle_playing_waiting_for_response(body, phone, media, player):
     if media and body:
         return format_response("Please send either an image or text, not both.")
     elif "status" == body.lower():
-        num_players = len(player.game.players)
-        num_waiting = num_players - player.game.current_round_responses
-        return format_response(
-            f"On round {player.game.current_round} of {num_players}, waiting on {num_waiting} players to send responses."
-        )
+        game = player.game
+        num_players = len(game.players)
+        num_waiting = num_players - game.current_round_responses
+        waiting_players = "\n".join(game.waiting_on_players)
+        message = f"On round {game.current_round + 1} of {num_players}, waiting on {num_waiting} players to send responses"
+        if waiting_players:
+            message += ":\n" + waiting_players
+        return format_response(message)
     elif body.lower() == "leave":
         player.quit()
     elif body.lower() == "repeat prompt" or body.lower() == "resend prompt":
